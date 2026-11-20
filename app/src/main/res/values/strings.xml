@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">StudioFlow</string>
+    <string name="tagline_auth">Quản lý lịch hẹn, phòng studio, thiết bị và tài chính đồng bộ tức thì</string>
+    <string name="btn_sign_in_google">Đăng nhập với Google</string>
+    <string name="nav_overview">Tổng quan</string>
+    <string name="nav_bookings">Lịch hẹn</string>
+    <string name="nav_resources">Tài nguyên</string>
+    <string name="nav_clients_finance">Khách &amp; Thu chi</string>
+    <string name="action_new_booking">Đặt lịch mới</string>
+    <string name="action_sign_out">Đăng xuất</string>
+</resources>

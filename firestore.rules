@@ -1,0 +1,249 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestampField(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // 3. Validation Helpers (Anti-Update-Gap)
+    function isValidBooking(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.clientName is string && data.clientName.size() >= 1 && data.clientName.size() <= 80 &&
+             (!('clientPhone' in data) || (data.clientPhone is string && data.clientPhone.size() <= 30)) &&
+             data.roomName is string && data.roomName.size() >= 1 && data.roomName.size() <= 80 &&
+             data.serviceType in ['photo', 'video', 'audio', 'podcast', 'livestream', 'other'] &&
+             data.dateText is string && data.dateText.size() >= 1 && data.dateText.size() <= 20 &&
+             data.timeSlot is string && data.timeSlot.size() >= 1 && data.timeSlot.size() <= 30 &&
+             data.totalAmount is int && data.totalAmount >= 0 && data.totalAmount <= 10000000000 &&
+             data.depositAmount is int && data.depositAmount >= 0 && data.depositAmount <= data.totalAmount &&
+             data.paymentStatus in ['unpaid', 'deposit', 'paid'] &&
+             data.status in ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'] &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidRoom(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.category in ['photo', 'video', 'audio', 'multipurpose'] &&
+             data.hourlyRate is int && data.hourlyRate >= 0 && data.hourlyRate <= 1000000000 &&
+             data.areaSqm is int && data.areaSqm >= 0 && data.areaSqm <= 10000 &&
+             data.status in ['available', 'occupied', 'maintenance'] &&
+             data.amenities is list && data.amenities.size() <= 10 &&
+             (data.amenities.size() == 0 || data.amenities[0] is string) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidEquipment(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.category in ['camera', 'lens', 'lighting', 'audio', 'accessory'] &&
+             (!('serialCode' in data) || (data.serialCode is string && data.serialCode.size() <= 40)) &&
+             data.dailyRate is int && data.dailyRate >= 0 && data.dailyRate <= 1000000000 &&
+             data.quantity is int && data.quantity >= 1 && data.quantity <= 1000 &&
+             data.status in ['ready', 'in_use', 'maintenance'] &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidClient(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             data.tier in ['new', 'regular', 'vip', 'corporate'] &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    function isValidTransaction(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.type in ['income', 'expense'] &&
+             data.category in ['booking', 'deposit', 'rental', 'equipment', 'operations', 'staff', 'other'] &&
+             data.amount is int && data.amount > 0 && data.amount <= 10000000000 &&
+             data.dateText is string && data.dateText.size() >= 1 && data.dateText.size() <= 20 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    // 4. User-Scoped Collections
+    match /users/{userId} {
+      // Bookings
+      match /bookings/{bookingId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(bookingId);
+        allow create: if isOwner(userId) && isValidId(bookingId) &&
+                         isValidBooking(incoming(), userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'clientName', 'roomName', 'serviceType',
+                           'dateText', 'timeSlot', 'totalAmount', 'depositAmount',
+                           'paymentStatus', 'status', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'clientName', 'clientPhone', 'roomName', 'serviceType',
+                           'dateText', 'timeSlot', 'totalAmount', 'depositAmount',
+                           'paymentStatus', 'status', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampField(incoming().createdAt) &&
+                         isValidTimestampField(incoming().updatedAt);
+        allow update: if isOwner(userId) && isValidId(bookingId) &&
+                         isValidBooking(incoming(), userId) &&
+                         !(existing().status in ['completed', 'cancelled']) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestampField(incoming().updatedAt) &&
+                         (
+                           (
+                             incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+                           ) ||
+                           (
+                             incoming().diff(existing()).affectedKeys().hasOnly([
+                               'title', 'clientName', 'clientPhone', 'roomName', 'serviceType',
+                               'dateText', 'timeSlot', 'totalAmount', 'depositAmount',
+                               'paymentStatus', 'status', 'notes', 'updatedAt'
+                             ])
+                           )
+                         );
+        allow delete: if isOwner(userId) && isValidId(bookingId);
+      }
+
+      // Studio Rooms
+      match /rooms/{roomId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(roomId);
+        allow create: if isOwner(userId) && isValidId(roomId) &&
+                         isValidRoom(incoming(), userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'category', 'hourlyRate', 'areaSqm',
+                           'status', 'amenities', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'category', 'hourlyRate', 'areaSqm',
+                           'status', 'amenities', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampField(incoming().createdAt) &&
+                         isValidTimestampField(incoming().updatedAt);
+        allow update: if isOwner(userId) && isValidId(roomId) &&
+                         isValidRoom(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestampField(incoming().updatedAt) &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'name', 'category', 'hourlyRate', 'areaSqm',
+                             'status', 'amenities', 'notes', 'updatedAt'
+                           ])
+                         );
+        allow delete: if isOwner(userId) && isValidId(roomId);
+      }
+
+      // Equipment Inventory
+      match /equipment/{equipmentId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(equipmentId);
+        allow create: if isOwner(userId) && isValidId(equipmentId) &&
+                         isValidEquipment(incoming(), userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'category', 'dailyRate', 'quantity',
+                           'status', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'category', 'serialCode', 'dailyRate',
+                           'quantity', 'status', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampField(incoming().createdAt) &&
+                         isValidTimestampField(incoming().updatedAt);
+        allow update: if isOwner(userId) && isValidId(equipmentId) &&
+                         isValidEquipment(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestampField(incoming().updatedAt) &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'name', 'category', 'serialCode', 'dailyRate',
+                             'quantity', 'status', 'notes', 'updatedAt'
+                           ])
+                         );
+        allow delete: if isOwner(userId) && isValidId(equipmentId);
+      }
+
+      // Clients
+      match /clients/{clientId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(clientId);
+        allow create: if isOwner(userId) && isValidId(clientId) &&
+                         isValidClient(incoming(), userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'tier', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'phone', 'email', 'tier', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampField(incoming().createdAt) &&
+                         isValidTimestampField(incoming().updatedAt);
+        allow update: if isOwner(userId) && isValidId(clientId) &&
+                         isValidClient(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestampField(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'phone', 'email', 'tier', 'notes', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(clientId);
+      }
+
+      // Finance Transactions
+      match /transactions/{transactionId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(transactionId);
+        allow create: if isOwner(userId) && isValidId(transactionId) &&
+                         isValidTransaction(incoming(), userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'type', 'category', 'amount',
+                           'dateText', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'type', 'category', 'amount',
+                           'dateText', 'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidTimestampField(incoming().createdAt) &&
+                         isValidTimestampField(incoming().updatedAt);
+        allow update: if isOwner(userId) && isValidId(transactionId) &&
+                         isValidTransaction(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestampField(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'type', 'category', 'amount', 'dateText', 'notes', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(transactionId);
+      }
+    }
+  }
+}

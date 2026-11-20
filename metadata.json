@@ -1,0 +1,6 @@
+{
+  "name": "StudioFlow",
+  "description": "Ứng dụng quản lý lịch hẹn, phòng studio, thiết bị, khách hàng và tài chính dành cho studio sáng tạo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

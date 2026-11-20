@@ -1,0 +1,352 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "A studio session booking belonging to an authenticated studio manager.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Session title or package name"
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Client display name"
+        },
+        "clientPhone": {
+          "type": "string",
+          "description": "Client contact phone number"
+        },
+        "roomName": {
+          "type": "string",
+          "description": "Assigned studio room name"
+        },
+        "serviceType": {
+          "type": "string",
+          "enum": ["photo", "video", "audio", "podcast", "livestream", "other"],
+          "description": "Studio service category"
+        },
+        "dateText": {
+          "type": "string",
+          "description": "Scheduled date in YYYY-MM-DD format"
+        },
+        "timeSlot": {
+          "type": "string",
+          "description": "Scheduled time range e.g. 09:00 - 12:00"
+        },
+        "totalAmount": {
+          "type": "integer",
+          "description": "Total booking amount in VND"
+        },
+        "depositAmount": {
+          "type": "integer",
+          "description": "Deposit received in VND"
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["unpaid", "deposit", "paid"],
+          "description": "Payment state"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "in_progress", "completed", "cancelled"],
+          "description": "Booking lifecycle status"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional session notes"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp via FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp via FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "clientName",
+        "roomName",
+        "serviceType",
+        "dateText",
+        "timeSlot",
+        "totalAmount",
+        "depositAmount",
+        "paymentStatus",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StudioRoom": {
+      "title": "StudioRoom",
+      "description": "A studio space or booth managed by the studio owner.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Room display name"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["photo", "video", "audio", "multipurpose"],
+          "description": "Room specialization"
+        },
+        "hourlyRate": {
+          "type": "integer",
+          "description": "Hourly rental rate in VND"
+        },
+        "areaSqm": {
+          "type": "integer",
+          "description": "Room area in square meters"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["available", "occupied", "maintenance"],
+          "description": "Room availability status"
+        },
+        "amenities": {
+          "type": "array",
+          "description": "Bounded list of up to 10 room amenities"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional room notes"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "category",
+        "hourlyRate",
+        "areaSqm",
+        "status",
+        "amenities",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EquipmentItem": {
+      "title": "EquipmentItem",
+      "description": "Studio gear and equipment asset tracked in inventory.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Equipment model or name"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["camera", "lens", "lighting", "audio", "accessory"],
+          "description": "Equipment category"
+        },
+        "serialCode": {
+          "type": "string",
+          "description": "Inventory asset tag or serial"
+        },
+        "dailyRate": {
+          "type": "integer",
+          "description": "Daily rental rate in VND"
+        },
+        "quantity": {
+          "type": "integer",
+          "description": "Available units"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ready", "in_use", "maintenance"],
+          "description": "Equipment status"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional maintenance or usage notes"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "category",
+        "dailyRate",
+        "quantity",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ClientRecord": {
+      "title": "ClientRecord",
+      "description": "Studio client contact and tier profile.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Client full name or brand"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Client phone number"
+        },
+        "email": {
+          "type": "string",
+          "description": "Client email address"
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["new", "regular", "vip", "corporate"],
+          "description": "Client relationship tier"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional preferences or notes"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "tier",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FinanceTransaction": {
+      "title": "FinanceTransaction",
+      "description": "Studio income or expense ledger entry.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated owner UID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Transaction description"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["income", "expense"],
+          "description": "Income or expense"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["booking", "deposit", "rental", "equipment", "operations", "staff", "other"],
+          "description": "Financial category"
+        },
+        "amount": {
+          "type": "integer",
+          "description": "Amount in VND"
+        },
+        "dateText": {
+          "type": "string",
+          "description": "Transaction date in YYYY-MM-DD format"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional transaction notes"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "type",
+        "category",
+        "amount",
+        "dateText",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/Booking"
+      },
+      "description": "Studio bookings owned by the authenticated user."
+    },
+    "/users/{userId}/rooms/{roomId}": {
+      "schema": {
+        "$ref": "#/entities/StudioRoom"
+      },
+      "description": "Studio rooms owned by the authenticated user."
+    },
+    "/users/{userId}/equipment/{equipmentId}": {
+      "schema": {
+        "$ref": "#/entities/EquipmentItem"
+      },
+      "description": "Studio equipment inventory owned by the authenticated user."
+    },
+    "/users/{userId}/clients/{clientId}": {
+      "schema": {
+        "$ref": "#/entities/ClientRecord"
+      },
+      "description": "Studio clients owned by the authenticated user."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/FinanceTransaction"
+      },
+      "description": "Studio financial ledger transactions owned by the authenticated user."
+    }
+  }
+}
